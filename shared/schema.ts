@@ -1,18 +1,35 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+export type AIMode = "decisions" | "planner" | "advisor";
+
+export const aiRequestSchema = z.object({
+  mode: z.enum(["decisions", "planner", "advisor"]),
+  input: z.string().min(1, "Please enter your question or task"),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-});
+export type AIRequest = z.infer<typeof aiRequestSchema>;
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export interface DecisionResponse {
+  recommendation: string;
+  pros: string[];
+  cons: string[];
+  whatMatters: string;
+  nextSteps: string[];
+}
+
+export interface PlannerResponse {
+  timeBlocks: {
+    time: string;
+    task: string;
+    duration: string;
+  }[];
+  overview: string;
+}
+
+export interface AdvisorResponse {
+  explanation: string;
+  keyPoints: string[];
+  guidance: string;
+}
+
+export type AIResponse = DecisionResponse | PlannerResponse | AdvisorResponse;
