@@ -142,7 +142,8 @@ export function DecisionsMode() {
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-3">
-                    {response.pros.map((pro, index) => (
+                    {(response.pros || []).map((pro, index) => (
+
                       <li key={index} className="flex items-start gap-2" data-testid={`text-pro-${index}`}>
                         <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
                         <span className="text-sm leading-relaxed">{pro}</span>
@@ -161,7 +162,7 @@ export function DecisionsMode() {
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-3">
-                    {response.cons.map((con, index) => (
+                    {(response.cons || []).map((con, index) => (
                       <li key={index} className="flex items-start gap-2" data-testid={`text-con-${index}`}>
                         <XCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
                         <span className="text-sm leading-relaxed">{con}</span>
