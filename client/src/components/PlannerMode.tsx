@@ -19,7 +19,7 @@ export function PlannerMode() {
   const mutation = useMutation({
     mutationFn: async (text: string) => {
       const result = await apiRequest("POST", "/api/ai/planner", { input: text });
-      return result as PlannerResponse;
+      return result as unknown as PlannerResponse;
     },
     onSuccess: (data) => {
       setResponse(data);

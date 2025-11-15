@@ -19,7 +19,7 @@ export function DecisionsMode() {
   const mutation = useMutation({
     mutationFn: async (text: string) => {
       const result = await apiRequest("POST", "/api/ai/decisions", { input: text });
-      return result as DecisionResponse;
+      return result as unknown as DecisionResponse;
     },
     onSuccess: (data) => {
       setResponse(data);

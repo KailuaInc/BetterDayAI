@@ -18,7 +18,7 @@ export function AdvisorMode() {
   const mutation = useMutation({
     mutationFn: async (text: string) => {
       const result = await apiRequest("POST", "/api/ai/advisor", { input: text });
-      return result as AdvisorResponse;
+      return result as unknown as AdvisorResponse;
     },
     onSuccess: (data) => {
       setResponse(data);
