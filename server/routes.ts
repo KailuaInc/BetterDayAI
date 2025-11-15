@@ -15,8 +15,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const response = await getDecisionRecommendation(input);
       res.json(response);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error in decisions endpoint:", error);
+      if (error?.status === 429 || error?.code === 'insufficient_quota') {
+        return res.status(429).json({ error: "OpenAI API quota exceeded. Please check your API key billing and quota at platform.openai.com" });
+      }
       res.status(500).json({ error: "Failed to get recommendation. Please try again." });
     }
   });
@@ -32,8 +35,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const response = await createPlan(input);
       res.json(response);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error in planner endpoint:", error);
+      if (error?.status === 429 || error?.code === 'insufficient_quota') {
+        return res.status(429).json({ error: "OpenAI API quota exceeded. Please check your API key billing and quota at platform.openai.com" });
+      }
       res.status(500).json({ error: "Failed to create plan. Please try again." });
     }
   });
@@ -49,8 +55,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const response = await getAdvisoryGuidance(input);
       res.json(response);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error in advisor endpoint:", error);
+      if (error?.status === 429 || error?.code === 'insufficient_quota') {
+        return res.status(429).json({ error: "OpenAI API quota exceeded. Please check your API key billing and quota at platform.openai.com" });
+      }
       res.status(500).json({ error: "Failed to get guidance. Please try again." });
     }
   });
