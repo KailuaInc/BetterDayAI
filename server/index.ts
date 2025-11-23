@@ -4,16 +4,18 @@ import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 
-declare module 'http' {
+declare module "http" {
   interface IncomingMessage {
-    rawBody: unknown
+    rawBody: unknown;
   }
 }
-app.use(express.json({
-  verify: (req, _res, buf) => {
-    req.rawBody = buf;
-  }
-}));
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      req.rawBody = buf;
+    },
+  }),
+);
 app.use(express.urlencoded({ extended: false }));
 
 app.use((req, res, next) => {
@@ -56,26 +58,79 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
     throw err;
   });
+  app.get("/", (_req, res) => {
+    res.send("BetterDay AI server is running 👍");
+  });
+
+  app.get("/api/plan", (_req, res) => {
+    res.json({
+      overview: "Here’s a focused plan for your day.",
+      timeBlocks: [
+        {
+          time: "8:00 AM",
+          task: "Wake-up + light stretch",
+          duration: "15 min",
+        },
+        {
+          time: "8:15 AM",
+          task: "Coffee + review today’s top 3 priorities",
+          duration: "20 min",
+        },
+        {
+          time: "8:35 AM",
+          task: "Deep work block (no phone, no email)",
+          duration: "90 min",
+        },
+        {
+          time: "10:05 AM",
+          task: "Short walk / water break",
+          duration: "10 min",
+        },
+        {
+          time: "10:15 AM",
+          task: "Follow-ups, email, and quick tasks",
+          duration: "45 min",
+        },
+        {
+          time: "11:00 AM",
+          task: "Client / project work block",
+          duration: "60 min",
+        },
+        {
+          time: "12:00 PM",
+          task: "Lunch away from screens",
+          duration: "30–45 min",
+        },
+        {
+          time: "1:00 PM",
+          task: "Creative / strategic work (planning, writing, ideas)",
+          duration: "60 min",
+        },
+        {
+          time: "2:00 PM",
+          task: "Admin + organizing (files, calendar, tasks)",
+          duration: "30 min",
+        },
+        {
+          time: "2:30 PM",
+          task: "Wrap-up: review wins, set 3 priorities for tomorrow",
+          duration: "20 min",
+        },
+      ],
+    });
+  });
 
   // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
+  const port = parseInt(process.env.PORT || "5000", 10);
+  server.listen(
+    {
+      port,
+      host: "0.0.0.0",
+      reusePort: true,
+    },
+    () => {
+      log(`serving on port ${port}`);
+    },
+  );
 })();

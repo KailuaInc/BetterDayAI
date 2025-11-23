@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RisingSun } from "@/components/RisingSun";
-import { DecisionsMode } from "@/components/DecisionsMode";
-import { PlannerMode } from "@/components/PlannerMode";
+import DecisionsMode from "@/components/DecisionsMode";
+import { PlannerMode, PlannerResponse } from "@/components/PlannerMode";
 import { AdvisorMode } from "@/components/AdvisorMode";
 import { motion } from "framer-motion";
 import type { AIMode } from "@shared/schema";
@@ -32,7 +32,10 @@ export default function Home() {
           onValueChange={(value) => setActiveTab(value as AIMode)}
           className="w-full"
         >
-          <TabsList className="grid w-full grid-cols-3 mb-6" data-testid="tabs-navigation">
+          <TabsList
+            className="grid w-full grid-cols-3 mb-6"
+            data-testid="tabs-navigation"
+          >
             <TabsTrigger
               value="decisions"
               className="text-xs sm:text-sm"
