@@ -1,70 +1,66 @@
-import type { Express } from "express";
-import { createServer, type Server } from "http";
-import { aiRequestSchema } from "@shared/schema";
-import { getDecisionRecommendation, createPlan, getAdvisoryGuidance } from "./openai";
+import { Router } from "express";
+import { askOpenAI } from "./openai";
 
-export async function registerRoutes(app: Express): Promise<Server> {
-  // BetterDay Decisions endpoint
-  app.post("/api/ai/decisions", async (req, res) => {
-    try {
-      const { input } = req.body;
-      
-      if (!input || typeof input !== "string" || input.trim().length === 0) {
-        return res.status(400).json({ error: "Please enter your question or task" });
-      }
+const router = Router();
 
-      const response = await getDecisionRecommendation(input);
-      res.json(response);
-    } catch (error: any) {
-      console.error("Error in decisions endpoint:", error);
-      if (error?.status === 429 || error?.code === 'insufficient_quota') {
-        return res.status(429).json({ error: "OpenAI API quota exceeded. Please check your API key billing and quota at platform.openai.com" });
-      }
-      res.status(500).json({ error: "Failed to get recommendation. Please try again." });
-    }
-  });
-
-  // BetterDay Planner endpoint
-  app.post("/api/ai/planner", async (req, res) => {
-    try {
-      const { input } = req.body;
-      
-      if (!input || typeof input !== "string" || input.trim().length === 0) {
-        return res.status(400).json({ error: "Please enter your tasks and goals" });
-      }
-
-      const response = await createPlan(input);
-      res.json(response);
-    } catch (error: any) {
-      console.error("Error in planner endpoint:", error);
-      if (error?.status === 429 || error?.code === 'insufficient_quota') {
-        return res.status(429).json({ error: "OpenAI API quota exceeded. Please check your API key billing and quota at platform.openai.com" });
-      }
-      res.status(500).json({ error: "Failed to create plan. Please try again." });
-    }
-  });
-
-  // BetterDay Advisor endpoint
-  app.post("/api/ai/advisor", async (req, res) => {
-    try {
-      const { input } = req.body;
-      
-      if (!input || typeof input !== "string" || input.trim().length === 0) {
-        return res.status(400).json({ error: "Please enter your question" });
-      }
-
-      const response = await getAdvisoryGuidance(input);
-      res.json(response);
-    } catch (error: any) {
-      console.error("Error in advisor endpoint:", error);
-      if (error?.status === 429 || error?.code === 'insufficient_quota') {
-        return res.status(429).json({ error: "OpenAI API quota exceeded. Please check your API key billing and quota at platform.openai.com" });
-      }
-      res.status(500).json({ error: "Failed to get guidance. Please try again." });
-    }
-  });
-
-  const httpServer = createServer(app);
-
-  return httpServer;
+function wrapPayload(text: string) {
+  return {
+    text,
+    message: text,
+    answer: text,
+    data: text,
+  };
 }
+
+// DECISIONS
+router.post("/api/decisions", async (req, res) => {
+  try {
+    const { input } = req.body;
+
+    const prompt =
+      "You are BetterDay, a friendly life-decision assistant. Answer clearly and concisely.\n\nQuestion: " +
+      input;
+
+    const text = await askOpenAI(prompt);
+    res.json(wrapPayload(text));
+  } catch (err) {
+    console.error("Error in /api/decisions", err);
+    res.status(500).json({ error: "Failed to get decision." });
+  }
+});
+
+// PLANNER
+router.post("/api/planner", async (req, res) => {
+  try {
+    const { question } = req.body;
+
+    const prompt =
+      "You are BetterDay, a planning assistant. Create a short numbered plan.\n\nRequest: " +
+      question;
+
+    const text = await askOpenAI(prompt);
+    res.json(wrapPayload(text));
+  } catch (err) {
+    console.error("Error in /api/planner", err);
+    res.status(500).json({ error: "Failed to get plan." });
+  }
+});
+
+// ADVISOR
+router.post("/api/advisor", async (req, res) => {
+  try {
+    const { input } = req.body;
+
+    const prompt =
+      "You are BetterDay, a friendly life advisor. Give practical, concise guidance.\n\nQuestion: " +
+      input;
+
+    const text = await askOpenAI(prompt);
+    res.json(wrapPayload(text));
+  } catch (err) {
+    console.error("Error in /api/advisor", err);
+    res.status(500).json({ error: "Failed to get advisor response." });
+  }
+});
+
+export default router;

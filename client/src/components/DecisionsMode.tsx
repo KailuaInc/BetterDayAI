@@ -1,235 +1,124 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, CheckCircle2, XCircle, Lightbulb } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import type { DecisionResponse } from "@/shared/schema";
-import { motion, AnimatePresence } from "framer-motion";
+
+const API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
+
+async function getDecision(input: string): Promise<string> {
+  if (!API_KEY) {
+    throw new Error("Missing VITE_OPENAI_API_KEY");
+  }
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: "gpt-4.1-mini",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are BetterDay, a friendly life-decision assistant. Answer clearly and concisely.",
+        },
+        {
+          role: "user",
+          content: input,
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch decision");
+  }
+
+  const data = await response.json();
+  const text =
+    data.choices?.[0]?.message?.content ||
+    data.choices?.[0]?.text ||
+    data.message ||
+    "";
+
+  return text.trim();
+}
 
 export default function DecisionsMode() {
   const [input, setInput] = useState("");
-  const [response, setResponse] = useState<DecisionResponse | null>(null);
-  const toast = useToast();
+  const [answer, setAnswer] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const mutation = useMutation({
-    mutationFn: async (text: string) => {
-      const res = await fetch("/api/ai/decisions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ input: text }),
-      });
-
-      if (!res.ok) {
-        throw new Error(`Request failed: ${res.status}`);
-      }
-
-      const data = (await res.json()) as DecisionResponse;
-      return data;
-    },
-
-    onSuccess: (data) => {
-      setResponse(data);
-    },
-
-    onError: () => {
-      toast({
-        title: "Something went wrong",
-        description: "Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!input.trim()) return;
-    mutation.mutate(input);
+
+    setLoading(true);
+    setError(null);
+    setAnswer("");
+
+    try {
+      const result = await getDecision(input.trim());
+      setAnswer(result || "I couldn't come up with an answer.");
+    } catch (err) {
+      console.error(err);
+      setError("Something went wrong while getting a recommendation.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const isLoading = mutation.isPending;
-
   return (
-    <div className="space-y-6">
-      {/* Input card */}
-      <Card data-testid="card-input">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Lightbulb className="w-5 h-5" />
-            Decisions
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Textarea
-            placeholder="Describe your decision..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-          />
-          <Button
-            onClick={handleSubmit}
-            disabled={isLoading || !input.trim()}
-            className="w-full"
-          >
-            {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Get Recommendation
-          </Button>
-        </CardContent>
-      </Card>
+    <div style={{ maxWidth: 700, margin: "0 auto", padding: "2rem 1rem" }}>
+      <textarea
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder="What decision are you trying to make today?"
+        style={{
+          width: "100%",
+          minHeight: "120px",
+          padding: "0.75rem",
+          fontSize: "1rem",
+          borderRadius: 8,
+          border: "1px solid #ddd",
+          resize: "vertical",
+        }}
+      />
+      <div style={{ marginTop: "1rem" }}>
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          style={{
+            padding: "0.6rem 1.2rem",
+            borderRadius: 999,
+            border: "none",
+            cursor: "pointer",
+            fontWeight: 600,
+          }}
+        >
+          {loading ? "Thinking..." : "Get Recommendation"}
+        </button>
+      </div>
 
-      <AnimatePresence>
-        {/* Loading state */}
-        {isLoading && (
-          <motion.div
-            key="loading"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            className="grid md:grid-cols-2 gap-4"
-          >
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Thinking…</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Skeleton className="h-4 w-2/3" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Analyzing options…</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Skeleton className="h-4 w-1/2" />
-                <Skeleton className="h-4 w-3/5" />
-                <Skeleton className="h-4 w-2/3" />
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
+      {error && (
+        <p style={{ marginTop: "1rem", color: "#e53935", fontSize: "0.9rem" }}>
+          {error}
+        </p>
+      )}
 
-        {/* Results state */}
-        {response && !isLoading && (
-          <motion.div
-            key="results"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            className="grid md:grid-cols-2 gap-4"
-          >
-            {" "}
-            {/* DEBUG: show raw response */}
-            <pre className="col-span-2 text-xs whitespace-pre-wrap border p-2 rounded">
-              {JSON.stringify(response, null, 2)}
-            </pre>
-            {/* Recommendation */}
-            <Card data-testid="card-recommendation">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-green-600" />
-                  Recommendation
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p
-                  className="text-base leading-relaxed font-medium"
-                  data-testid="text-recommendation"
-                >
-                  {response.recommendation}
-                </p>
-              </CardContent>
-            </Card>
-            {/* What matters most */}
-            <Card data-testid="card-what-matters">
-              <CardHeader>
-                <CardTitle className="text-lg">What Matters Most</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p
-                  className="text-sm leading-relaxed"
-                  data-testid="text-what-matters"
-                >
-                  {response.whatMatters}
-                </p>
-              </CardContent>
-            </Card>
-            {/* Pros */}
-            <Card data-testid="card-pros">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  Pros
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3">
-                  {(response?.pros ?? []).map((pro: string, index: number) => (
-                    <li
-                      key={index}
-                      className="flex items-start gap-2"
-                      data-testid={`text-pro-${index}`}
-                    >
-                      <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm leading-relaxed">{pro}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-            {/* Cons */}
-            <Card data-testid="card-cons">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <XCircle className="h-5 w-5 text-red-600" />
-                  Cons
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3">
-                  {(response?.cons ?? []).map((con: string, index: number) => (
-                    <li
-                      key={index}
-                      className="flex items-start gap-2"
-                      data-testid={`text-con-${index}`}
-                    >
-                      <XCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm leading-relaxed">{con}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-            {/* Next steps */}
-            <Card data-testid="card-next-steps">
-              <CardHeader>
-                <CardTitle className="text-lg">Next Steps</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ol className="space-y-3">
-                  {(response?.nextSteps ?? []).map(
-                    (step: string, index: number) => (
-                      <li
-                        key={index}
-                        className="flex items-start gap-3"
-                        data-testid={`text-step-${index}`}
-                      >
-                        <Badge className="mt-0.5 flex-shrink-0">
-                          {index + 1}
-                        </Badge>
-                        <span className="text-sm leading-relaxed">{step}</span>
-                      </li>
-                    ),
-                  )}
-                </ol>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {answer && !error && (
+        <div
+          style={{
+            marginTop: "1.5rem",
+            padding: "1rem",
+            borderRadius: 8,
+            border: "1px solid #eee",
+            background: "#fafafa",
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          {answer}
+        </div>
+      )}
     </div>
   );
 }
